@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div id="initial-screen" class="text-center">
+        <h1 class="text-5xl font-bold mb-8">Question Builder</h1>
+        <button onclick="showQuestionForm()"
+            class="bg-blue-500 text-white px-6 py-3 rounded-full text-lg hover:bg-blue-600 transition duration-300">
+            Start
+        </button>
+    </div>
+
+    <div id="question-form" class="hidden text-center">
+        <h1 class="text-5xl font-bold mb-8">Question Builder</h1>
+        <form id="mcq-form" class="space-y-6">
+            <div>
+                <label for="topic-name" class="block text-lg font-medium text-gray-700">Topic Name</label>
+                <input type="text" id="topic-name" name="topic-name"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="difficulty-level" class="block text-lg font-medium text-gray-700">Difficulty Level</label>
+                <select id="difficulty-level" name="difficulty-level"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option>Easy</option>
+                    <option>Medium</option>
+                    <option>Hard</option>
+                </select>
+            </div>
+            <div>
+                <label for="number-of-questions" class="block text-lg font-medium text-gray-700">Number of
+                    Questions</label>
+                <input type="number" id="number-of-questions" name="number-of-questions"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            </div>
+            <button type="button" onclick="generateMCQs()"
+                class="bg-blue-500 text-white px-6 py-3 rounded-full text-lg hover:bg-blue-600 transition duration-300">
+                Generate
+            </button>
+        </form>
+        <div id="mcq-output" class="mt-8 text-left"></div>
+    </div>
+
+    <script>
+        function showQuestionForm() {
+            document.getElementById('initial-screen').classList.add('hidden');
+            document.getElementById('question-form').classList.remove('hidden');
+        }
+
+        async function generateMCQs() {
+            const topic = document.getElementById('topic-name').value;
+            const difficulty = document.getElementById('difficulty-level').value;
+            const numQuestions = document.getElementById('number-of-questions').value;
+
+            const mcqOutput = document.getElementById('mcq-output');
+            mcqOutput.innerHTML = '<p class="text-gray-600">Generating questions... Please wait.</p>';
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        topic: topic,
+                        difficulty: difficulty,
+                        numQuestions: numQuestions,
+                    }),
+                });
+
+                const data = await response.json();
+                mcqOutput.innerHTML = '';
+
+                if (data.error) {
+                    mcqOutput.innerHTML = `<p class="text-red-600">${data.error}</p>`;
+                } else if (data.questions && data.questions.length > 0) {
+                    data.questions.forEach((question, index) => {
+                        const questionId = `answer-${index}`;
+                        mcqOutput.innerHTML += `
+                    <div class="mb-6 p-4 bg-white rounded-lg shadow">
+                        <h3 class="text-xl font-semibold">Question ${question.question}</h3>
+                        <ul class="mt-2 space-y-2">
+                            ${question.options.map((option) =>
+                            `<li class="text-gray-700">${option}</li>`
+                        ).join('')}
+                        </ul>
+                        <button onclick="toggleAnswer('${questionId}')" class="mt-2 text-blue-600 font-medium">
+                            <i class="fas fa-eye"></i> Show Answer
+                        </button>
+                        <p id="${questionId}" class="mt-2 text-green-600 font-medium hidden">
+                            Correct Answer: ${question.correct_answer}
+                        </p>
+                    </div>
+                `;
+                    });
+                } else {
+                    mcqOutput.innerHTML = '<p class="text-red-600">No questions generated. Please try again.</p>';
+                }
+            } catch (error) {
+                mcqOutput.innerHTML = '<p class="text-red-600">An error occurred. Please try again.</p>';
+                console.error('Error:', error);
+            }
+        }
+
+        // Function to toggle answer visibility
+        function toggleAnswer(answerId) {
+            const answerElement = document.getElementById(answerId);
+            if (answerElement.classList.contains('hidden')) {
+                answerElement.classList.remove('hidden');
+            } else {
+                answerElement.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+
+</html>
